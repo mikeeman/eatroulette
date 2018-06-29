@@ -7,16 +7,14 @@ import android.database.DatabaseUtils;
 import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteOpenHelper;
 
+import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
-import java.lang.reflect.Array;
 import java.util.ArrayList;
-//import java.util.HashMap;
-//import java.util.Hashtable;
 
 /**
- * Created by PC on 9/28/2016.
+ * Created by mmatkiws on 5/7/2017.
  */
 
 public class DBHelper extends SQLiteOpenHelper {
@@ -35,13 +33,15 @@ public class DBHelper extends SQLiteOpenHelper {
     public static final String SEARCH_COLUMN_PRICE              = "price";
     public static final String SEARCH_COLUMN_PHOTO              = "image_url";
     public static final String SEARCH_COLUMN_RATING             = "rating";
-    public static final String SEARCH_COLUMN_LOCATION           = "location";
+    public static final String SEARCH_COLUMN_LATITUDE           = "lat";
+    public static final String SEARCH_COLUMN_LONGITUDE          = "lon";
     public static final String SEARCH_COLUMN_ADDRESS_COUNTRY    = "country";
     public static final String SEARCH_COLUMN_ADDRESS_STATE      = "state";
     public static final String SEARCH_COLUMN_ADDRESS_CITY       = "city";
     public static final String SEARCH_COLUMN_ADDRESS_ZIP_CODE   = "zip_code";
     public static final String SEARCH_COLUMN_ADDRESS_STREET     = "address1";
     public static final String SEARCH_COLUMN_WEBSITE            = "url";
+    public static final String SEARCH_COLUMN_TYPE               = "type";
 
     public DBHelper(Context context)
     {
@@ -66,12 +66,15 @@ public class DBHelper extends SQLiteOpenHelper {
                 + SEARCH_COLUMN_PRICE + " text, "
                 + SEARCH_COLUMN_PHOTO + " text, "
                 + SEARCH_COLUMN_RATING + " text, "
+                + SEARCH_COLUMN_LATITUDE + " text, "
+                + SEARCH_COLUMN_LONGITUDE + " text, "
                 + SEARCH_COLUMN_ADDRESS_COUNTRY + " text, "
                 + SEARCH_COLUMN_ADDRESS_STATE + " text, "
                 + SEARCH_COLUMN_ADDRESS_CITY + " text, "
                 + SEARCH_COLUMN_ADDRESS_ZIP_CODE + " text, "
                 + SEARCH_COLUMN_ADDRESS_STREET + " text, "
-                + SEARCH_COLUMN_WEBSITE + " text"
+                + SEARCH_COLUMN_WEBSITE + " text, "
+                + SEARCH_COLUMN_TYPE + " text"
                 + ");"
         );
 
@@ -106,25 +109,28 @@ public class DBHelper extends SQLiteOpenHelper {
     public boolean insertSearch (JSONObject business){
         SQLiteDatabase db = this.getWritableDatabase();
 
-        String name     = new String();
-        String phone    = new String();
-        String price    = new String();
-        String photo    = new String();
-        String rating   = new String();
-        String country  = new String();
-        String state    = new String();
-        String city     = new String();
-        String zip_code = new String();
-        String street   = new String();
-        String website  = new String();
+        String name         = new String();
+        String phone        = new String();
+        String price        = new String();
+        String photo        = new String();
+        String rating       = new String();
+        String latitude     = new String();
+        String longitude    = new String();
+        String country      = new String();
+        String state        = new String();
+        String city         = new String();
+        String zip_code     = new String();
+        String street       = new String();
+        String website      = new String();
+        String type         = new String();
 
         try {
             name = business.getString(YelpHelper.RESPONSE_NAME);
             photo = business.getString(YelpHelper.RESPONSE_PHOTO);
             rating = business.getString(YelpHelper.RESPONSE_RATING);
-            phone = business.getString(YelpHelper.RESPONSE_PHONE);
+            //phone = business.getString(YelpHelper.RESPONSE_PHONE);
             price = business.getString(YelpHelper.RESPONSE_PRICE);
-            website = business.getString(YelpHelper.RESPONSE_ADDRESS_WEBSITE);
+            website = business.getString(YelpHelper.RESPONSE_WEBSITE);
 
             JSONObject location = new JSONObject(business.getString(YelpHelper.RESPONSE_LOCATION));
             country = location.getString(YelpHelper.RESPONSE_ADDRESS_COUNTRY);
@@ -132,6 +138,14 @@ public class DBHelper extends SQLiteOpenHelper {
             city = location.getString(YelpHelper.RESPONSE_ADDRESS_CITY);
             zip_code = location.getString(YelpHelper.RESPONSE_ADDRESS_ZIP_CODE);
             street = location.getString(YelpHelper.RESPONSE_ADDRESS_STREET);
+
+            JSONArray categories = new JSONArray(business.getString(YelpHelper.RESPONSE_TYPE));
+            JSONObject category = categories.getJSONObject(0);
+            type = category.getString(YelpHelper.RESPONSE_TYPE_NAME);
+
+            JSONObject coordinates = new JSONObject(business.getString(YelpHelper.RESPONSE_COORDINATES));
+            latitude = coordinates.getString(YelpHelper.RESPONSE_LATITUDE);
+            longitude = coordinates.getString(YelpHelper.RESPONSE_LONGITUDE);
         } catch (JSONException e) {
             e.printStackTrace();
         }
@@ -150,6 +164,9 @@ public class DBHelper extends SQLiteOpenHelper {
         contentValues.put(SEARCH_COLUMN_ADDRESS_ZIP_CODE, zip_code);
         contentValues.put(SEARCH_COLUMN_ADDRESS_STREET, street);
         contentValues.put(SEARCH_COLUMN_WEBSITE, website);
+        contentValues.put(SEARCH_COLUMN_TYPE, type);
+        contentValues.put(SEARCH_COLUMN_LATITUDE, latitude);
+        contentValues.put(SEARCH_COLUMN_LONGITUDE, longitude);
 
         db.insert(SEARCH_TABLE_NAME, null, contentValues);
 
@@ -296,6 +313,10 @@ public class DBHelper extends SQLiteOpenHelper {
 
     public static void clearSearchData(SQLiteDatabase db){
         db.execSQL("DELETE FROM " + SEARCH_TABLE_NAME + ";");
+    }
+
+    public static void dropSearchTable(SQLiteDatabase db){
+        db.execSQL("DROP TABLE IF EXISTS " + SEARCH_TABLE_NAME + ";");
     }
 }
 

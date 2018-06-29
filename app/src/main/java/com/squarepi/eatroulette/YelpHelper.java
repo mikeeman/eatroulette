@@ -1,53 +1,25 @@
 package com.squarepi.eatroulette;
 
-import android.Manifest;
 import android.content.Context;
-import android.content.pm.PackageManager;
 import android.location.Location;
-import android.location.LocationManager;
 import android.os.AsyncTask;
-import android.support.v4.app.ActivityCompat;
-import android.support.v4.content.ContextCompat;
 import android.util.Log;
-import android.util.Xml;
-import android.widget.TextView;
-import android.widget.Toast;
-
-import com.yelp.clientlib.connection.YelpAPIFactory;
-
-import org.apache.http.conn.ssl.SSLSocketFactory;
-import org.apache.http.params.HttpParams;
-import org.json.JSONException;
-import org.json.JSONObject;
-import org.json.JSONStringer;
 
 import java.io.BufferedReader;
-import java.io.BufferedWriter;
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
-import java.io.OutputStream;
-import java.io.OutputStreamWriter;
 import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
-import java.security.KeyStore;
-import java.security.cert.Certificate;
-import java.util.ArrayList;
-import java.util.List;
 import java.util.concurrent.ThreadLocalRandom;
 
-import javax.net.ssl.HttpsURLConnection;
-import javax.net.ssl.SSLPeerUnverifiedException;
-
-import static java.net.Proxy.Type.HTTP;
-
-
 /**
- * Created by PC on 9/22/2016.
+ * Created by mmatkiws on 5/7/2017.
  */
+
 
 public class YelpHelper {
     public static final String RESPONSE_ACCESS_TOKEN        = "access_token";
@@ -65,8 +37,13 @@ public class YelpHelper {
     public static final String RESPONSE_ADDRESS_CITY        = "city";
     public static final String RESPONSE_ADDRESS_ZIP_CODE    = "zip_code";
     public static final String RESPONSE_ADDRESS_STREET      = "address1";
-    public static final String RESPONSE_ADDRESS_WEBSITE     = "url";
+    public static final String RESPONSE_WEBSITE             = "url";
     public static final String RESPONSE_COORDINATES         = "coordinates";
+    public static final String RESPONSE_LATITUDE            = "latitude";
+    public static final String RESPONSE_LONGITUDE           = "longitude";
+    public static final String RESPONSE_IS_CLOSED           = "is_closed";
+    public static final String RESPONSE_TYPE                = "categories";
+    public static final String RESPONSE_TYPE_NAME           = "title";
 
     public static String mCurrentLocationLat;
     public static String mCurrentLocationLon;
@@ -131,7 +108,7 @@ public class YelpHelper {
 
 
     public static String httpGet(URL url, String params){
-        Log.i("httpGet", url.toString() + params);
+        Log.i("httpGet", url.toString() + "&" + params);
         InputStream is = new InputStream() {
             @Override
             public int read() throws IOException {
@@ -234,7 +211,7 @@ public class YelpHelper {
             //BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(urlConn.getOutputStream(), "UTF-8"));
             //writer.write(params.toString());
             //writer.write(params.toString().getBytes("UTF-8"));
-           // writer.writeBytes(params);
+            // writer.writeBytes(params);
             writer.write(params.getBytes(StandardCharsets.US_ASCII));
             writer.flush();
             writer.close();
@@ -309,6 +286,9 @@ public class YelpHelper {
                         }
                     });
 
+            //TODO: for emulator set lat lon for Markham
+            setCurrentLocation("43.8382668","-79.3012424");
+
             if (getCurrentLocationLat() == null || getCurrentLocationLon() == null) {
                 Location l = SingleShotLocationProvider.requestLastKnownLocation(c);
                 setCurrentLocation(Double.toString(l.getLatitude()),Double.toString(l.getLongitude()));
@@ -342,8 +322,10 @@ public class YelpHelper {
                 e.printStackTrace();
             }
             */
+            //TODO change this search term based on time of day OR filter
+            String foodCategory = "Restaurant";
+            String params = "term=" + foodCategory + "&latitude=" + getCurrentLocationLat() + "&longitude=" + getCurrentLocationLon()+"&offset="+Integer.toString(offset);
 
-            String params = "term=food&latitude=" + getCurrentLocationLat() + "&longitude=" + getCurrentLocationLon()+"&offset="+Integer.toString(offset);
             if (firstTime){
                 params += "&limit=20";
             }
@@ -356,8 +338,8 @@ public class YelpHelper {
         {
             e.printStackTrace();
         } //catch (IOException e) {
-           // e.printStackTrace();
-       // } //catch (JSONException e) {
+        // e.printStackTrace();
+        // } //catch (JSONException e) {
         //e.printStackTrace();
         //}
         return response;
@@ -379,7 +361,7 @@ public class YelpHelper {
         } //catch (IOException e) {
         //    e.printStackTrace();
         //} //catch (JSONException e) {
-            //e.printStackTrace();
+        //e.printStackTrace();
         //}
         return response;
     }
@@ -434,4 +416,7 @@ public class YelpHelper {
 
         }
     }
+
+
+
 }

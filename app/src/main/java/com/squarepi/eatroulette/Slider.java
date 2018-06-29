@@ -1,48 +1,61 @@
 package com.squarepi.eatroulette;
 
+import android.app.Activity;
+import android.app.ActivityManager;
+import android.content.ComponentName;
+import android.content.Context;
+import android.content.Intent;
+import android.content.pm.PackageManager;
 import android.database.Cursor;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.location.Location;
+import android.net.ConnectivityManager;
+import android.net.NetworkInfo;
 import android.net.Uri;
 import android.os.AsyncTask;
-import android.os.Bundle;
+import android.support.v4.app.ActivityCompat;
+import android.support.v4.content.ContextCompat;
 import android.support.v7.app.AppCompatActivity;
+import android.os.Bundle;
 import android.util.DisplayMetrics;
 import android.util.Log;
 import android.view.View;
 import android.view.Window;
+import android.view.animation.AnimationUtils;
 import android.widget.ExpandableListView;
 import android.widget.ImageView;
 import android.widget.RatingBar;
 import android.widget.RelativeLayout;
 import android.widget.TextView;
 import android.widget.Toast;
+//import android.widget.Toast;
 
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.io.InputStream;
+import java.net.MalformedURLException;
+import java.net.URL;
 import java.util.ArrayList;
-import java.util.List;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ThreadLocalRandom;
+import java.util.jar.Manifest;
 
-import static android.support.v7.appcompat.R.attr.background;
-
-/**
- * Created by PC on 9/22/2016.
- */
+import static android.Manifest.permission.ACCESS_FINE_LOCATION;
 
 public class Slider extends AppCompatActivity {
-    private TextView tvBusinessName, tvDescription, tvAddress;
+
+    private TextView tvBusinessName, tvType, tvAddress, tvDistance, tvPrice;
     private ImageView ivPicture;
     private ExpandableListView elvHours;
     private RatingBar rbRatingBar;
 
     int expiresIn = -1;
     int maxBusinesses = 0;
+    int a;
+    int historyIndex = 0;
 
     Long lCurrentSystemTimeSeconds = System.currentTimeMillis()/1000;
 
@@ -60,49 +73,81 @@ public class Slider extends AppCompatActivity {
     String zip_code = new String();
     String street   = new String();
     String website  = new String();
+    String type     = new String();
+    String lat      = new String();
+    String lon      = new String();
 
     DBHelper db     = new DBHelper(this);
 
-    ArrayList<Cursor> alHistory = new ArrayList<>();
-    ArrayList<Integer> alActiveBusinesses = new ArrayList<>();
+    NetworkConnectivityHelper nConnHelper = new NetworkConnectivityHelper();
 
-    static Toast t;
+    ArrayList<Cursor> alHistory           = new ArrayList<>();
+    ArrayList<Integer> alActiveBusinesses = new ArrayList<>();
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
-        Log.i("Slider","onCreate");
+        Log.i("Slider","onCreate()");
         this.requestWindowFeature(Window.FEATURE_ACTION_BAR);
         super.onCreate(savedInstanceState);
 
         setContentView(R.layout.activity_slider);
-        initControls();
-        initSearchApi();
-        DBHelper.clearSearchData(db.getWritableDatabase());
 
-        //TODO remove loadSearchResults() and call async task at app load
-        loadSearchResults();
+        getPermissions(this);
 
-        //JSONObject business = getRandomizedBusiness();
-        //updateBusinessLocals(business);
-        getRandomizedBusiness();
-        updateControls();
-        t = Toast.makeText(this, "Swipe left to see more!", Toast.LENGTH_LONG);
-        t.show();
-        //Toast.makeText(this, "Swipe left to see more!", Toast.LENGTH_SHORT).show();
+        if (isConnected()) {
+            initControls();
+            initSearchApi();
+            //applyFonts();
+            DBHelper.clearSearchData(db.getWritableDatabase());
+            //DBHelper.dropSearchTable(db.getWritableDatabase());
+
+            //TODO remove loadSearchResults() and call async task at app load
+            loadSearchResults();
+
+            getRandomizedBusiness();
+            updateControls();
+            //t = Toast.makeText(this, "Swipe left to see more!", Toast.LENGTH_LONG);
+            //t.show();
+        } else {
+            Log.i("Slider", "No Network connectivity");
+        }
+    }
+
+    private void getPermissions(Context context) {
+        Log.i("Slider", "getPermissions()");
+        if (ContextCompat.checkSelfPermission(context, ACCESS_FINE_LOCATION) !=
+                PackageManager.PERMISSION_GRANTED) {
+            Log.i("Slider", "do not have ACCESS_FINE_LOCATION");
+            ActivityCompat.requestPermissions((Activity) context, new String[]{ACCESS_FINE_LOCATION}, a);
+        }
+        if (ContextCompat.checkSelfPermission(context, android.Manifest.permission.ACCESS_COARSE_LOCATION) !=
+                PackageManager.PERMISSION_GRANTED) {
+            Log.i("Slider", "do not have ACCESS_COURSE_LOCATION");
+
+        }
+    }
+
+    private boolean isConnected() {
+        Log.i("Slider", "checkNetworkConnectivity()");
+        return nConnHelper.checkNetworkConnectivity((ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE));
     }
 
     private void initControls() {
-        Log.i("Slider","initControls()");
-        tvBusinessName = (TextView) findViewById(R.id.tvBusinessName);
-        tvDescription = (TextView) findViewById(R.id.tvDescription);
-        tvAddress = (TextView) findViewById(R.id.tvAddress);
+        Log.i("Slider", "initControls()");
 
-        ivPicture = (ImageView) findViewById(R.id.ivPicture);
+        tvBusinessName  = (TextView) findViewById(R.id.tvBusinessName);
+        tvType          = (TextView) findViewById(R.id.tvType);
+        tvAddress       = (TextView) findViewById(R.id.tvAddress);
+        tvDistance      = (TextView) findViewById(R.id.tvDistance);
+        tvPrice         = (TextView) findViewById(R.id.tvPrice);
 
-        elvHours = (ExpandableListView) findViewById(R.id.elvHours);
+        ivPicture       = (ImageView) findViewById(R.id.ivPicture);
 
-        rbRatingBar = (RatingBar) findViewById(R.id.rbRating);
-        RelativeLayout background =(RelativeLayout)findViewById(R.id.rlSliderBackground);
+        elvHours        = (ExpandableListView) findViewById(R.id.elvHours);
+
+        rbRatingBar     = (RatingBar) findViewById(R.id.rbRating);
+
+        final RelativeLayout background =(RelativeLayout)findViewById(R.id.rlSliderBackground);
         background.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View arg0) {
@@ -112,6 +157,17 @@ public class Slider extends AppCompatActivity {
         background.setOnTouchListener(new OnSwipeTouchListener() {
             public boolean onSwipeTop() {
                 //Toast.makeText(MainActivity.this, "top", Toast.LENGTH_SHORT).show();
+                Log.i("Slider", "onSwipeTop()");
+                if (isConnected()){
+                    Log.i("Slider", "isConnected()");
+                    Intent myWebLink = new Intent(android.content.Intent.ACTION_VIEW);
+                    myWebLink.setData(Uri.parse(website));
+                    startActivity(myWebLink);
+                } else {
+                    Log.i("Slider", "isNOTConnected()");
+                    Toast.makeText(Slider.this, "No Network Connection...", Toast.LENGTH_SHORT).show();
+                }
+
                 return true;
             }
             public boolean onSwipeRight() {
@@ -119,51 +175,86 @@ public class Slider extends AppCompatActivity {
                 Log.i("Slider", "onSwipeRight()");
 
                 //check if history has more than just current entry
-                if (alHistory.size() > 1 && alActiveBusinesses.size() > 1){
+                if (alHistory.size() > 1 && alActiveBusinesses.size() > 1 && historyIndex < alHistory.size()){
                     for (int i=0; i<alHistory.size();i++){
                         Log.i("alHistory["+Integer.toString(i) + "]", alHistory.get(i).getString(alHistory.get(i).getColumnIndex(DBHelper.SEARCH_COLUMN_NAME)));
                     }
                     //remove current entry or else will get same business twice
-                    alHistory.remove(alHistory.size() - 1);
-                    alActiveBusinesses.remove(alActiveBusinesses.size() - 1);
+                    //alHistory.remove(alHistory.size() - 1);
+                    historyIndex += 1;
+                    //something to do with removing duplicates
+                    //alActiveBusinesses.remove(alActiveBusinesses.size() - 1);
+
                     //get last entry
-                    updateBusinessLocals(alHistory.get(alHistory.size() - 1));
+                    updateBusinessLocals(alHistory.get(alHistory.size() - 1 - historyIndex));
+                    background.setAnimation(AnimationUtils.loadAnimation(Slider.this, R.anim.lefttoright));
+                    //TODO: Implement FragmentPagerAdapter
+                    //TODO: https://github.com/codepath/android_guides/wiki/ViewPager-with-FragmentPagerAdapter
+                    //TODO: Layout ViewPager
                     updateControls();
                 }
                 return true;
             }
             public boolean onSwipeLeft() {
                 //Toast.makeText(MainActivity.this, "left", Toast.LENGTH_SHORT).show();
-                //JSONObject business = getRandomizedBusiness();
-                //updateBusinessLocals(business);
                 Log.i("Slider", "onSwipeLeft()");
-                getRandomizedBusiness();
-                updateControls();
+
+                if (alHistory.size() > 1 && alActiveBusinesses.size() > 1) {
+                    for (int i = 0; i < alHistory.size(); i++) {
+                        Log.i("alHistory[" + Integer.toString(i) + "]", alHistory.get(i).getString(alHistory.get(i).getColumnIndex(DBHelper.SEARCH_COLUMN_NAME)));
+                    }
+                }
+                //check if user has back swiped and load those businesses first
+                if (alHistory.size() > 1 && alActiveBusinesses.size() > 1 && historyIndex > 0) {
+                    historyIndex -= 1;
+                    updateBusinessLocals(alHistory.get(alHistory.size() - 1 - historyIndex));
+                    background.setAnimation(AnimationUtils.loadAnimation(Slider.this, R.anim.righttoleft));
+                    updateControls();
+                } else {
+                    //only load new businesses if we have a connection
+                    if (isConnected()) {
+                        Log.i("Slider", "isConnected()");
+                        getRandomizedBusiness();
+                        background.setAnimation(AnimationUtils.loadAnimation(Slider.this, R.anim.righttoleft));
+                        updateControls();
+                    } else {
+                        Log.i("Slider", "isNOTConnected()");
+                        Toast.makeText(Slider.this, "No Network Connection...", Toast.LENGTH_SHORT).show();
+                    }
+                }
+
+
+
                 return true;
             }
             public boolean onSwipeBottom() {
-               //Toast.makeText(MainActivity.this, "bottom", Toast.LENGTH_SHORT).show();
+                //Toast.makeText(MainActivity.this, "bottom", Toast.LENGTH_SHORT).show();
                 return true;
             }
         });
-
     }
 
-    private void initSearchApi(){
-        Log.i("Slider","initSearchApi()");
+    private void initSearchApi() {
+        Log.i("Slider", "initSearchApi()");
         //Check if we can use existing token
         if ( db.isValidToken() ) {
             //Can use existing token
+            Log.i("Slider", "Found valid existing token");
             token = db.getToken();
+            Log.i("Slider", "Using token: " + token);
         }
         else{
             //Get new token
+            Log.i("Slider", "Could not find valid existing token, creating new token");
             //Clean up any old tokens
             db.deleteSetting(DBHelper.SETTINGS_NAME_TOKEN);
+            Log.i("Slider", "Successfully deleted Token Name");
             db.deleteSetting(DBHelper.SETTINGS_NAME_TOKENEXPIRES);
+            Log.i("Slider", "Successfully deleted Token Expires");
             //Get a new token
             try {
                 response = new YelpHelper.GetTokenTask().execute().get();
+                Log.i("Slider", "Response: " + response);
             } catch (ExecutionException e) {
                 e.printStackTrace();
             } catch (InterruptedException e) {
@@ -172,28 +263,36 @@ public class Slider extends AppCompatActivity {
 
             try {
                 // Convert String to json object
+                Log.i("Slider", "Converting to JSON Object");
                 JSONObject jsonResponse = new JSONObject(response);
                 token = jsonResponse.getString(YelpHelper.RESPONSE_ACCESS_TOKEN);
+                Log.i("Slider", "Token=" + token);
                 expiresIn = jsonResponse.getInt(YelpHelper.RESPONSE_EXPIRES_IN);
+                Log.i("Slider", "ExpiresIn=" + expiresIn);
             } catch (JSONException e) {
                 e.printStackTrace();
             }
 
             //Get new expiry date
             Long lExpiryDateSeconds = lCurrentSystemTimeSeconds + expiresIn;
+            Log.i("Slider", "lExpiryDateSeconds=" + lExpiryDateSeconds.toString());
 
             //Write new token and expiry to db
+            Log.i("Slider", "Inserting into db...");
             db.insertSetting(DBHelper.SETTINGS_NAME_TOKEN, token);
+            Log.i("Slider", "Successfully inserted Token Name into db");
             db.insertSetting(DBHelper.SETTINGS_NAME_TOKENEXPIRES, lExpiryDateSeconds.toString());
+            Log.i("Slider", "Successfully inserted Token Expires into db");
         }
 
         //Now we have a valid token
+        Log.i("Slider", "Setting token: " + token);
         YelpHelper.setCurrentToken(token);
+        Log.i("Slider", "Successfully setCurrentToken(" + token + ")");
     }
 
     private void loadSearchResults() {
-        //Search everything around current location and load to db
-        Log.i("Slider", "loadSearchResults");
+        Log.i("Slider", "loadSearchResults()");
         try {
             response = new YelpHelper.GetRandomSearchTask(this, maxBusinesses).execute().get();
         } catch (ExecutionException e) {
@@ -212,10 +311,32 @@ public class Slider extends AppCompatActivity {
             for (int i = 0; i < businessList.length(); i++) {
                 JSONObject business = businessList.getJSONObject(i);
                 ArrayList<String> dbCurrentBusinesses = db.getAllSearch();
-                if (!dbCurrentBusinesses.contains(business.getString(YelpHelper.RESPONSE_NAME))){
-                    db.insertSearch(business);
+                //Check if current business does not exist in db
+                if (!dbCurrentBusinesses.contains(business.getString(YelpHelper.RESPONSE_NAME))) {
+                    //Get location object for address info
+                    JSONObject location   = business.getJSONObject(YelpHelper.RESPONSE_LOCATION);
+                    JSONArray category    = business.getJSONArray(YelpHelper.RESPONSE_TYPE);
+                    //Get first item in array
+                    JSONObject categories = category.getJSONObject(0);
+                    JSONObject coordinates = business.getJSONObject(YelpHelper.RESPONSE_COORDINATES);
+                    //Check if current business has all entries and is not closed
+                    if (business.getString(YelpHelper.RESPONSE_PHOTO).length() > 0 &&
+                            business.getString(YelpHelper.RESPONSE_NAME).length() > 0 &&
+                            location.getString(YelpHelper.RESPONSE_ADDRESS_CITY).length() > 0 &&
+                            location.getString(YelpHelper.RESPONSE_ADDRESS_STREET).length() > 0 &&
+                            location.getString(YelpHelper.RESPONSE_ADDRESS_STATE).length() > 0 &&
+                            business.getString(YelpHelper.RESPONSE_IS_CLOSED) == "false" &&
+                            business.getString(YelpHelper.RESPONSE_RATING).length() > 0 &&
+                            business.getString(YelpHelper.RESPONSE_WEBSITE).length() > 0 &&
+                            categories.getString(YelpHelper.RESPONSE_TYPE_NAME).length() > 0 &&
+                            coordinates.getString(YelpHelper.RESPONSE_LATITUDE).length() > 0 &&
+                            coordinates.getString(YelpHelper.RESPONSE_LONGITUDE).length() > 0) {
+                        db.insertSearch(business);
+                    } else {
+                        Log.i("dbCurrentBusinesses", business.getString(YelpHelper.RESPONSE_NAME) + " is missing information...");
+                    }
                 } else {
-                    Log.i("dbCurrentBusinesses",business.getString(YelpHelper.RESPONSE_NAME) + " already exists!");
+                    Log.i("dbCurrentBusinesses", business.getString(YelpHelper.RESPONSE_NAME) + " already exists!");
                 }
             }
         } catch (JSONException e) {
@@ -224,13 +345,7 @@ public class Slider extends AppCompatActivity {
     }
 
     private void getRandomizedBusiness() {
-        Log.i("Slider", "getRandomizedBusiness");
-        //Randomize a business ID following appropriate rules
-
-        //Is it best to load whole JSON Array or just one object at a time?
-        //Most likely do just one db read, load everything to memory and then apply filtering
-        //Going to just use db as it is and minimize phone memory usage
-
+        Log.i("Slider", "getRandomizedBusiness()");
         Cursor res;
         updateLocation();
 
@@ -264,7 +379,7 @@ public class Slider extends AppCompatActivity {
             alActiveBusinesses.add(currentBusinessID);
             updateBusinessLocals(res);
         } else {
-            Toast.makeText(this, "Loading more businesses...", Toast.LENGTH_LONG).show();
+            //Toast.makeText(this, "Loading more businesses...", Toast.LENGTH_LONG).show();
             //new DownloadSearchResults().execute();
             loadSearchResults();
             getRandomizedBusiness();
@@ -278,35 +393,8 @@ public class Slider extends AppCompatActivity {
         //Update sqlite db
     }
 
-
-    private void updateBusinessLocals(JSONObject business) {
-        Log.i("slider", "updateBusinessLocals(business)");
-        try {
-            name = business.getString(YelpHelper.RESPONSE_NAME);
-            photo = business.getString(YelpHelper.RESPONSE_PHOTO);
-            rating = business.getString(YelpHelper.RESPONSE_RATING);
-            phone = business.getString(YelpHelper.RESPONSE_PHONE);
-            price = business.getString(YelpHelper.RESPONSE_PRICE);
-            website = business.getString(YelpHelper.RESPONSE_ADDRESS_WEBSITE);
-
-            JSONObject location = new JSONObject(business.getString(YelpHelper.RESPONSE_LOCATION));
-            country = location.getString(YelpHelper.RESPONSE_ADDRESS_COUNTRY);
-            state = location.getString(YelpHelper.RESPONSE_ADDRESS_STATE);
-            city = location.getString(YelpHelper.RESPONSE_ADDRESS_CITY);
-            zip_code = location.getString(YelpHelper.RESPONSE_ADDRESS_ZIP_CODE);
-            street = location.getString(YelpHelper.RESPONSE_ADDRESS_STREET);
-
-            address = street + ", " + city + ", " + state;
-            //address = street + ", " + city + ", " + state;
-            //coordinates = "";
-            //public static final String RESPONSE_LOCATION            = "coordinates";
-        } catch (JSONException e) {
-            e.printStackTrace();
-        }
-    }
-
-    private void updateBusinessLocals(Cursor res){
-        Log.i("Slider", "updateBusinessLocals(Cursor)");
+    private void updateBusinessLocals(Cursor res) {
+        Log.i("Slider", "updateBusinessLocals(Cursor res)");
         if (res != null) {
             if (res.moveToFirst()) {
                 //do {
@@ -322,6 +410,9 @@ public class Slider extends AppCompatActivity {
                 zip_code = res.getString(res.getColumnIndex(DBHelper.SEARCH_COLUMN_ADDRESS_ZIP_CODE));
                 street   = res.getString(res.getColumnIndex(DBHelper.SEARCH_COLUMN_ADDRESS_STREET));
                 address  = street + ", " + city + ", " + state;
+                type     = res.getString(res.getColumnIndex(DBHelper.SEARCH_COLUMN_TYPE));
+                lat      = res.getString(res.getColumnIndex(DBHelper.SEARCH_COLUMN_LATITUDE));
+                lon      = res.getString(res.getColumnIndex(DBHelper.SEARCH_COLUMN_LONGITUDE));
                 Log.i("name", name);
                 /*Log.i("photo", photo);
                 Log.i("rating", phone);
@@ -332,15 +423,18 @@ public class Slider extends AppCompatActivity {
                 Log.i("city", city);
                 Log.i("zip_code", zip_code);
                 Log.i("street", street);
-                Log.i("address", address);*/
+                */Log.i("address", address);
+                Log.i("lat", lat);
+                Log.i("lon", lon);
                 //} while (res.moveToNext());
             }
         }
     }
 
-    private void updateControls(){
+    private void updateControls() {
+        Log.i("Slider", "updateControls()");
         //Read SQLITE db and query for BUSINESS_ID provided
-        CharSequence csBusinessName, csAddress, csDescription;
+        CharSequence csBusinessName, csAddress, csType, csDistance, csPrice;
         Uri uImageUri;
         float fNumStars;
 
@@ -350,9 +444,11 @@ public class Slider extends AppCompatActivity {
         uImageUri = Uri.parse("/sdcard/DCIM/Camera/IMG_20160922_020412.jpg");
         fNumStars = 4.1f;
 */
-        csBusinessName = name;
-        csAddress = address;
-        csDescription = "TBD";
+        csBusinessName  = name;
+        csAddress       = address;
+        csType          = type;
+        csDistance      = getDistance(lat, lon);
+        csPrice         = price;
         //uImageUri = Uri.parse("/sdcard/DCIM/Camera/IMG_20160922_020412.jpg");
 
         //uImageUri = Uri.parse(photo);
@@ -367,7 +463,9 @@ public class Slider extends AppCompatActivity {
         tvBusinessName.setText(csBusinessName);
         rbRatingBar.setRating(fNumStars);
         tvAddress.setText(csAddress);
-        tvDescription.setText(csDescription);
+        tvType.setText(csType);
+        tvDistance.setText(csDistance);
+        tvPrice.setText(csPrice);
 
         //ivPicture.setImageBitmap();
         //ivPicture.setMaxWidth(100);
@@ -378,45 +476,36 @@ public class Slider extends AppCompatActivity {
         int height = metrics.heightPixels;
         int width = metrics.widthPixels;
 
+        //TODO: set image height to constant
         ivPicture.setMaxHeight(height/2);
         //ivPicture.setMinHeight(height/2);
         ivPicture.setMinimumWidth(width);
 
-        if (t != null){
-            t.cancel();
-        }
+        //if (t != null){
+        //    t.cancel();
+        //}
         //elvHours.set
     }
 
-    // show The Image in a ImageView
-    //new DownloadImageTask((ImageView) findViewById(R.id.imageView1))
-    //        .execute("http://java.sogeti.nl/JavaBlog/wp-content/uploads/2009/04/android_icon_256.png");
-
-    //public void onClick(View v) {
-    //    startActivity(new Intent(this, IndexActivity.class));
-    //    finish();
-
-//    }
-
     private class DownloadImageTask extends AsyncTask<String, Void, Bitmap> {
-            ImageView bmImage;
+        ImageView bmImage;
 
-            public DownloadImageTask(ImageView bmImage) {
-                this.bmImage = bmImage;
-            }
+        public DownloadImageTask(ImageView bmImage) {
+            this.bmImage = bmImage;
+        }
 
-            protected Bitmap doInBackground(String... urls) {
-                String urldisplay = urls[0];
-                Bitmap mIcon11 = null;
-                try {
-                    InputStream in = new java.net.URL(urldisplay).openStream();
-                    mIcon11 = BitmapFactory.decodeStream(in);
-                } catch (Exception e) {
-                    Log.e("Error", e.getMessage());
-                    e.printStackTrace();
-                }
-                return mIcon11;
+        protected Bitmap doInBackground(String... urls) {
+            String urldisplay = urls[0];
+            Bitmap mIcon11 = null;
+            try {
+                InputStream in = new java.net.URL(urldisplay).openStream();
+                mIcon11 = BitmapFactory.decodeStream(in);
+            } catch (Exception e) {
+                Log.e("Error", e.getMessage());
+                e.printStackTrace();
             }
+            return mIcon11;
+        }
 
         protected void onPostExecute(Bitmap result) {
             bmImage.setImageBitmap(result);
@@ -461,4 +550,76 @@ public class Slider extends AppCompatActivity {
             YelpHelper.setOldLocation();
         }
     }
+
+    private CharSequence getDistance(CharSequence lat, CharSequence lon){
+        Log.i("Slider","getDistance(" + lat + ", " + lon + ")");
+
+        CharSequence ret = "...";
+
+        String latitude     = lat.toString();
+        String longitude    = lon.toString();
+
+        String currentLat   = YelpHelper.getCurrentLocationLat();
+        String currentLon   = YelpHelper.getCurrentLocationLon();
+
+        try {
+            ret = new GoogleHelper.GetDistanceTask(currentLat, currentLon, latitude, longitude).execute().get();
+        } catch (ExecutionException e) {
+            e.printStackTrace();
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+
+        return ret;
+    }
+
+    private CharSequence getFlyOverDistance(CharSequence lat, CharSequence lon){
+        Log.i("Slider","getFlyOverDistance(" + lat + ", " + lon + ")");
+
+        CharSequence ret;
+
+        String latitude     = lat.toString();
+        String longitude    = lon.toString();
+
+        String currentLat   = YelpHelper.getCurrentLocationLat();
+        String currentLon   = YelpHelper.getCurrentLocationLon();
+
+        double lat1 = Double.parseDouble(currentLat);
+        double lat2 = Double.parseDouble(latitude);
+
+        double lon1 = Double.parseDouble(currentLon);
+        double lon2 = Double.parseDouble(longitude);
+
+        Log.i("lat1", String.valueOf(lat1));
+        Log.i("lat2", String.valueOf(lat2));
+        Log.i("lon1", String.valueOf(lon1));
+        Log.i("lon2", String.valueOf(lon2));
+
+        //Latitude: 1 deg = 110.574 km
+        //Longitude: 1 deg = 111.320*cos(latitude) km
+
+        double diffLat = Math.abs(lat2 - lat1);
+        double diffLon = Math.abs(lon2 - lon1);
+
+        Log.i("diffLat", String.valueOf(diffLat));
+        Log.i("diffLon", String.valueOf(diffLon));
+
+        double diffLatKm = diffLat * 110.574;
+        double diffLonKm = Math.cos((diffLon * Math.PI) / 180) * 111.320 * diffLon;
+
+        Log.i("diffLatKm", String.valueOf(diffLatKm));
+        Log.i("diffLonKm", String.valueOf(diffLonKm));
+
+        double distance = Math.sqrt(Math.pow(diffLatKm, 2) + Math.pow(diffLonKm, 2));
+        Log.i("distance", String.valueOf(distance));
+
+        int scale = (int) Math.pow(10, 1);
+        double roundedDistance = (double) Math.round(distance * scale) / scale;
+        Log.i("roundedDistance", String.valueOf(roundedDistance));
+
+        ret = String.valueOf(roundedDistance) + " km";
+
+        return ret;
+    }
+
 }

@@ -10,10 +10,9 @@ import android.os.Bundle;
 import android.os.Looper;
 import android.support.v4.content.ContextCompat;
 import android.util.Log;
-import android.widget.Toast;
 
 /**
- * Created by PC on 10/13/2016.
+ * Created by mmatkiws on 5/7/2017.
  */
 
 public class SingleShotLocationProvider {
@@ -40,6 +39,7 @@ public class SingleShotLocationProvider {
                 Log.i("isNetworkEnabled", "TRUE");
                 Criteria criteria = new Criteria();
                 criteria.setAccuracy(Criteria.ACCURACY_COARSE);
+                Log.i("requesting location", "...");
                 lastLocation = locationManager.getLastKnownLocation(LocationManager.NETWORK_PROVIDER);
                 Log.i("getLastKnownLocation", lastLocation.toString());
             } else {
@@ -138,8 +138,8 @@ public class SingleShotLocationProvider {
             Log.e("CheckPermissions", "DENIED");
             //parent.runOnUiThread(new Runnable() {
             //    public void run() {
-             //       Toast.makeText(parent.getBaseContext(), "Turn On Location", Toast.LENGTH_LONG).show();
-             //   }
+            //       Toast.makeText(parent.getBaseContext(), "Turn On Location", Toast.LENGTH_LONG).show();
+            //   }
             //});
         }
 

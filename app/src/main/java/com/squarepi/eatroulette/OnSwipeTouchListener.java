@@ -5,10 +5,10 @@ import android.view.MotionEvent;
 import android.view.View;
 
 /**
- * Created by PC on 10/12/2016.
+ * Created by mmatkiws on 5/7/2017.
  */
 
-public class OnSwipeTouchListener implements View.OnTouchListener {
+    public class OnSwipeTouchListener implements View.OnTouchListener {
 
     private final GestureDetector gestureDetector = new GestureDetector(new GestureListener());
 

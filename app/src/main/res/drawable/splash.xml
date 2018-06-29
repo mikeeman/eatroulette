@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android"  android:id="@+id/llLogo">
+    <item android:drawable="@color/lightgray"/>
+    <item android:id="@+id/itemlogo">
+        <rotate android:id="@+id/rotatelogo">
+            <bitmap android:src="@drawable/logo"
+                android:gravity="center" />
+        </rotate>
+    </item>
+</layer-list>
