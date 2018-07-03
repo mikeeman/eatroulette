@@ -61,6 +61,7 @@ public class Slider extends AppCompatActivity {
 
     String response = new String();
     String token    = new String();
+    String apiKey   = new String();
     String name     = new String();
     String address  = new String();
     String phone    = new String();
@@ -96,7 +97,6 @@ public class Slider extends AppCompatActivity {
 
         if (isConnected()) {
             initControls();
-            initSearchApi();
             //applyFonts();
             DBHelper.clearSearchData(db.getWritableDatabase());
             //DBHelper.dropSearchTable(db.getWritableDatabase());
@@ -135,19 +135,19 @@ public class Slider extends AppCompatActivity {
     private void initControls() {
         Log.i("Slider", "initControls()");
 
-        tvBusinessName  = (TextView) findViewById(R.id.tvBusinessName);
-        tvType          = (TextView) findViewById(R.id.tvType);
-        tvAddress       = (TextView) findViewById(R.id.tvAddress);
-        tvDistance      = (TextView) findViewById(R.id.tvDistance);
-        tvPrice         = (TextView) findViewById(R.id.tvPrice);
+        tvBusinessName = (TextView) findViewById(R.id.tvBusinessName);
+        tvType = (TextView) findViewById(R.id.tvType);
+        tvAddress = (TextView) findViewById(R.id.tvAddress);
+        tvDistance = (TextView) findViewById(R.id.tvDistance);
+        tvPrice = (TextView) findViewById(R.id.tvPrice);
 
-        ivPicture       = (ImageView) findViewById(R.id.ivPicture);
+        ivPicture = (ImageView) findViewById(R.id.ivPicture);
 
-        elvHours        = (ExpandableListView) findViewById(R.id.elvHours);
+        elvHours = (ExpandableListView) findViewById(R.id.elvHours);
 
-        rbRatingBar     = (RatingBar) findViewById(R.id.rbRating);
+        rbRatingBar = (RatingBar) findViewById(R.id.rbRating);
 
-        final RelativeLayout background =(RelativeLayout)findViewById(R.id.rlSliderBackground);
+        final RelativeLayout background = (RelativeLayout) findViewById(R.id.rlSliderBackground);
         background.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View arg0) {
@@ -158,7 +158,7 @@ public class Slider extends AppCompatActivity {
             public boolean onSwipeTop() {
                 //Toast.makeText(MainActivity.this, "top", Toast.LENGTH_SHORT).show();
                 Log.i("Slider", "onSwipeTop()");
-                if (isConnected()){
+                if (isConnected()) {
                     Log.i("Slider", "isConnected()");
                     Intent myWebLink = new Intent(android.content.Intent.ACTION_VIEW);
                     myWebLink.setData(Uri.parse(website));
@@ -170,14 +170,15 @@ public class Slider extends AppCompatActivity {
 
                 return true;
             }
+
             public boolean onSwipeRight() {
                 //Toast.makeText(MainActivity.this, "right", Toast.LENGTH_SHORT).show();
                 Log.i("Slider", "onSwipeRight()");
 
                 //check if history has more than just current entry
-                if (alHistory.size() > 1 && alActiveBusinesses.size() > 1 && historyIndex < alHistory.size()){
-                    for (int i=0; i<alHistory.size();i++){
-                        Log.i("alHistory["+Integer.toString(i) + "]", alHistory.get(i).getString(alHistory.get(i).getColumnIndex(DBHelper.SEARCH_COLUMN_NAME)));
+                if (alHistory.size() > 1 && alActiveBusinesses.size() > 1 && historyIndex < alHistory.size()) {
+                    for (int i = 0; i < alHistory.size(); i++) {
+                        Log.i("alHistory[" + Integer.toString(i) + "]", alHistory.get(i).getString(alHistory.get(i).getColumnIndex(DBHelper.SEARCH_COLUMN_NAME)));
                     }
                     //remove current entry or else will get same business twice
                     //alHistory.remove(alHistory.size() - 1);
@@ -195,6 +196,7 @@ public class Slider extends AppCompatActivity {
                 }
                 return true;
             }
+
             public boolean onSwipeLeft() {
                 //Toast.makeText(MainActivity.this, "left", Toast.LENGTH_SHORT).show();
                 Log.i("Slider", "onSwipeLeft()");
@@ -224,71 +226,14 @@ public class Slider extends AppCompatActivity {
                 }
 
 
-
                 return true;
             }
+
             public boolean onSwipeBottom() {
                 //Toast.makeText(MainActivity.this, "bottom", Toast.LENGTH_SHORT).show();
                 return true;
             }
         });
-    }
-
-    private void initSearchApi() {
-        Log.i("Slider", "initSearchApi()");
-        //Check if we can use existing token
-        if ( db.isValidToken() ) {
-            //Can use existing token
-            Log.i("Slider", "Found valid existing token");
-            token = db.getToken();
-            Log.i("Slider", "Using token: " + token);
-        }
-        else{
-            //Get new token
-            Log.i("Slider", "Could not find valid existing token, creating new token");
-            //Clean up any old tokens
-            db.deleteSetting(DBHelper.SETTINGS_NAME_TOKEN);
-            Log.i("Slider", "Successfully deleted Token Name");
-            db.deleteSetting(DBHelper.SETTINGS_NAME_TOKENEXPIRES);
-            Log.i("Slider", "Successfully deleted Token Expires");
-            //Get a new token
-            try {
-                response = new YelpHelper.GetTokenTask().execute().get();
-                Log.i("Slider", "Response: " + response);
-            } catch (ExecutionException e) {
-                e.printStackTrace();
-            } catch (InterruptedException e) {
-                e.printStackTrace();
-            }
-
-            try {
-                // Convert String to json object
-                Log.i("Slider", "Converting to JSON Object");
-                JSONObject jsonResponse = new JSONObject(response);
-                token = jsonResponse.getString(YelpHelper.RESPONSE_ACCESS_TOKEN);
-                Log.i("Slider", "Token=" + token);
-                expiresIn = jsonResponse.getInt(YelpHelper.RESPONSE_EXPIRES_IN);
-                Log.i("Slider", "ExpiresIn=" + expiresIn);
-            } catch (JSONException e) {
-                e.printStackTrace();
-            }
-
-            //Get new expiry date
-            Long lExpiryDateSeconds = lCurrentSystemTimeSeconds + expiresIn;
-            Log.i("Slider", "lExpiryDateSeconds=" + lExpiryDateSeconds.toString());
-
-            //Write new token and expiry to db
-            Log.i("Slider", "Inserting into db...");
-            db.insertSetting(DBHelper.SETTINGS_NAME_TOKEN, token);
-            Log.i("Slider", "Successfully inserted Token Name into db");
-            db.insertSetting(DBHelper.SETTINGS_NAME_TOKENEXPIRES, lExpiryDateSeconds.toString());
-            Log.i("Slider", "Successfully inserted Token Expires into db");
-        }
-
-        //Now we have a valid token
-        Log.i("Slider", "Setting token: " + token);
-        YelpHelper.setCurrentToken(token);
-        Log.i("Slider", "Successfully setCurrentToken(" + token + ")");
     }
 
     private void loadSearchResults() {
@@ -320,18 +265,21 @@ public class Slider extends AppCompatActivity {
                     JSONObject categories = category.getJSONObject(0);
                     JSONObject coordinates = business.getJSONObject(YelpHelper.RESPONSE_COORDINATES);
                     //Check if current business has all entries and is not closed
-                    if (business.getString(YelpHelper.RESPONSE_PHOTO).length() > 0 &&
-                            business.getString(YelpHelper.RESPONSE_NAME).length() > 0 &&
-                            location.getString(YelpHelper.RESPONSE_ADDRESS_CITY).length() > 0 &&
-                            location.getString(YelpHelper.RESPONSE_ADDRESS_STREET).length() > 0 &&
-                            location.getString(YelpHelper.RESPONSE_ADDRESS_STATE).length() > 0 &&
-                            business.getString(YelpHelper.RESPONSE_IS_CLOSED) == "false" &&
-                            business.getString(YelpHelper.RESPONSE_RATING).length() > 0 &&
-                            business.getString(YelpHelper.RESPONSE_WEBSITE).length() > 0 &&
-                            categories.getString(YelpHelper.RESPONSE_TYPE_NAME).length() > 0 &&
-                            coordinates.getString(YelpHelper.RESPONSE_LATITUDE).length() > 0 &&
-                            coordinates.getString(YelpHelper.RESPONSE_LONGITUDE).length() > 0) {
-                        db.insertSearch(business);
+                    if (business.has(YelpHelper.RESPONSE_PHOTO) && !business.isNull(YelpHelper.RESPONSE_PHOTO) &&
+                        business.has(YelpHelper.RESPONSE_NAME) && !business.isNull(YelpHelper.RESPONSE_NAME) &&
+                        business.has(YelpHelper.RESPONSE_PRICE) && !business.isNull(YelpHelper.RESPONSE_PRICE) &&
+                        location.has(YelpHelper.RESPONSE_ADDRESS_CITY) && !location.isNull(YelpHelper.RESPONSE_ADDRESS_CITY) &&
+                        location.has(YelpHelper.RESPONSE_ADDRESS_STREET) && !location.isNull(YelpHelper.RESPONSE_ADDRESS_STREET) &&
+                        location.has(YelpHelper.RESPONSE_ADDRESS_STATE) && !location.isNull(YelpHelper.RESPONSE_ADDRESS_STATE) &&
+                        //location.getString(YelpHelper.RESPONSE_ADDRESS_ZIP_CODE).length() > 0 &&
+                        business.has(YelpHelper.RESPONSE_IS_CLOSED) && business.getString(YelpHelper.RESPONSE_IS_CLOSED) == "false" &&
+                        business.has(YelpHelper.RESPONSE_RATING) && !business.isNull(YelpHelper.RESPONSE_RATING) &&
+                        business.has(YelpHelper.RESPONSE_WEBSITE) && !business.isNull(YelpHelper.RESPONSE_WEBSITE) &&
+                        categories.has(YelpHelper.RESPONSE_TYPE_NAME) && !categories.isNull(YelpHelper.RESPONSE_TYPE_NAME) &&
+                        coordinates.has(YelpHelper.RESPONSE_LATITUDE) && !coordinates.isNull(YelpHelper.RESPONSE_LATITUDE) &&
+                        coordinates.has(YelpHelper.RESPONSE_LONGITUDE) && !coordinates.isNull(YelpHelper.RESPONSE_LONGITUDE)) {
+                            db.insertSearch(business);
+                            Log.i("dbCurrentBusinesses", "Adding to db: " + business.getString(YelpHelper.RESPONSE_NAME));
                     } else {
                         Log.i("dbCurrentBusinesses", business.getString(YelpHelper.RESPONSE_NAME) + " is missing information...");
                     }
@@ -359,7 +307,7 @@ public class Slider extends AppCompatActivity {
             currentBusinessID = ThreadLocalRandom.current().nextInt(1, numberOfBusinesses);
         } else {
             boolean exists = true;
-            while (exists == true && alActiveBusinesses.size() < numberOfBusinesses - 1 ) {
+            while (exists && alActiveBusinesses.size() < numberOfBusinesses - 1 ) {
                 currentBusinessID = ThreadLocalRandom.current().nextInt(1, numberOfBusinesses);
                 if (!alActiveBusinesses.contains(currentBusinessID)) {
                     exists = false;
@@ -404,10 +352,10 @@ public class Slider extends AppCompatActivity {
                 phone    = res.getString(res.getColumnIndex(DBHelper.SEARCH_COLUMN_PHONE));
                 price    = res.getString(res.getColumnIndex(DBHelper.SEARCH_COLUMN_PRICE));
                 website  = res.getString(res.getColumnIndex(DBHelper.SEARCH_COLUMN_WEBSITE));
-                country  = res.getString(res.getColumnIndex(DBHelper.SEARCH_COLUMN_ADDRESS_COUNTRY));
+                //country  = res.getString(res.getColumnIndex(DBHelper.SEARCH_COLUMN_ADDRESS_COUNTRY));
                 state    = res.getString(res.getColumnIndex(DBHelper.SEARCH_COLUMN_ADDRESS_STATE));
                 city     = res.getString(res.getColumnIndex(DBHelper.SEARCH_COLUMN_ADDRESS_CITY));
-                zip_code = res.getString(res.getColumnIndex(DBHelper.SEARCH_COLUMN_ADDRESS_ZIP_CODE));
+                //zip_code = res.getString(res.getColumnIndex(DBHelper.SEARCH_COLUMN_ADDRESS_ZIP_CODE));
                 street   = res.getString(res.getColumnIndex(DBHelper.SEARCH_COLUMN_ADDRESS_STREET));
                 address  = street + ", " + city + ", " + state;
                 type     = res.getString(res.getColumnIndex(DBHelper.SEARCH_COLUMN_TYPE));

@@ -116,10 +116,10 @@ public class DBHelper extends SQLiteOpenHelper {
         String rating       = new String();
         String latitude     = new String();
         String longitude    = new String();
-        String country      = new String();
+        //String country      = new String();
         String state        = new String();
         String city         = new String();
-        String zip_code     = new String();
+        //String zip_code     = new String();
         String street       = new String();
         String website      = new String();
         String type         = new String();
@@ -133,10 +133,10 @@ public class DBHelper extends SQLiteOpenHelper {
             website = business.getString(YelpHelper.RESPONSE_WEBSITE);
 
             JSONObject location = new JSONObject(business.getString(YelpHelper.RESPONSE_LOCATION));
-            country = location.getString(YelpHelper.RESPONSE_ADDRESS_COUNTRY);
+            //country = location.getString(YelpHelper.RESPONSE_ADDRESS_COUNTRY);
             state = location.getString(YelpHelper.RESPONSE_ADDRESS_STATE);
             city = location.getString(YelpHelper.RESPONSE_ADDRESS_CITY);
-            zip_code = location.getString(YelpHelper.RESPONSE_ADDRESS_ZIP_CODE);
+            //zip_code = location.getString(YelpHelper.RESPONSE_ADDRESS_ZIP_CODE);
             street = location.getString(YelpHelper.RESPONSE_ADDRESS_STREET);
 
             JSONArray categories = new JSONArray(business.getString(YelpHelper.RESPONSE_TYPE));
@@ -158,10 +158,10 @@ public class DBHelper extends SQLiteOpenHelper {
         contentValues.put(SEARCH_COLUMN_PRICE, price);
         contentValues.put(SEARCH_COLUMN_PHOTO, photo);
         contentValues.put(SEARCH_COLUMN_RATING, rating);
-        contentValues.put(SEARCH_COLUMN_ADDRESS_COUNTRY, country);
+        //contentValues.put(SEARCH_COLUMN_ADDRESS_COUNTRY, country);
         contentValues.put(SEARCH_COLUMN_ADDRESS_STATE, state);
         contentValues.put(SEARCH_COLUMN_ADDRESS_CITY, city);
-        contentValues.put(SEARCH_COLUMN_ADDRESS_ZIP_CODE, zip_code);
+        //contentValues.put(SEARCH_COLUMN_ADDRESS_ZIP_CODE, zip_code);
         contentValues.put(SEARCH_COLUMN_ADDRESS_STREET, street);
         contentValues.put(SEARCH_COLUMN_WEBSITE, website);
         contentValues.put(SEARCH_COLUMN_TYPE, type);

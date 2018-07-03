@@ -127,7 +127,7 @@ public class Login extends AppCompatActivity {
             city = randomBusiness.getString(YelpHelper.RESPONSE_ADDRESS_CITY);
             zip_code = randomBusiness.getString(YelpHelper.RESPONSE_ADDRESS_ZIP_CODE);
             street = randomBusiness.getString(YelpHelper.RESPONSE_ADDRESS_STREET);
-            website = randomBusiness.getString(YelpHelper.RESPONSE_ADDRESS_WEBSITE);
+            website = randomBusiness.getString(YelpHelper.RESPONSE_WEBSITE);
 
             //public static final String RESPONSE_LOCATION            = "coordinates";
 

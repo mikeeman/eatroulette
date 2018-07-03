@@ -54,6 +54,11 @@ public class YelpHelper {
 
     private static String token;
 
+    public static String getCurrentApiKey()
+    {
+        return BuildConfig.API_KEY;
+    }
+
     public static String getCurrentToken()
     {
         //include validation, logic, logging or whatever you like here
@@ -121,7 +126,8 @@ public class YelpHelper {
         try {
             URL _url = new URL(url.toString() + "?" + params);
             HttpURLConnection urlConn =(HttpURLConnection)_url.openConnection();
-            String basicAuth = "Bearer " + getCurrentToken();
+            //String basicAuth = "Bearer " + getCurrentToken();
+            String basicAuth = "Bearer " + getCurrentApiKey();
             urlConn.setRequestProperty ("Authorization", basicAuth);
             urlConn.setRequestMethod("GET");
             //urlConn.setRequestProperty("Content-Type", "application/json; charset=UTF-8");
@@ -324,7 +330,7 @@ public class YelpHelper {
             */
             //TODO change this search term based on time of day OR filter
             String foodCategory = "Restaurant";
-            String params = "term=" + foodCategory + "&latitude=" + getCurrentLocationLat() + "&longitude=" + getCurrentLocationLon()+"&offset="+Integer.toString(offset);
+            String params = "term=" + foodCategory + "&latitude=" + getCurrentLocationLat() + "&longitude=" + getCurrentLocationLon() + "&offset=" + Integer.toString(offset) + "&open_now=true" + "&sort_by=rating";
 
             if (firstTime){
                 params += "&limit=20";
